@@ -1,2 +1,3 @@
-import cv2
-import pytesseract
+from ultralytics import YOLO
+
+model = YOLO("yolov8m.pt")  # initialize
