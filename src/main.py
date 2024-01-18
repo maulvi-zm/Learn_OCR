@@ -3,7 +3,7 @@ import cv2
 
 pytesseract.pytesseract.tesseract_cmd = r'C:\Users\Acer\AppData\Local\Programs\Tesseract-OCR\tesseract.exe'
 
-img = cv2.imread('4.png')
+img = cv2.imread('test/4.png')
 # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 text = pytesseract.image_to_string(img)
 # print(text)
