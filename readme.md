@@ -34,14 +34,28 @@
 
 ## Usage
 
-1. Place your images in the `images/` folder.
-2. Run the text detection script:
+1. Place your images in the `test/` folder.
+2. If you wanna add new languages (default=eng), you can download a dataset train in
+   ```
+   https://tesseract-ocr.github.io/tessdoc/Data-Files.html
+   ```
+   then, place inside folder tessdata relatively to your instalation path:
+   ```
+   C:\Users\Acer\AppData\Local\Programs\Tesseract-OCR\tessdata
+   ```
+   and add some configuration in your code. <br>
+   for example i using korean character (Code: 'kor')
+   ```
+   conf = r'--oem 3 --psm 6 -l kor'
+   data = pytesseract.image_to_data(img, config=conf, output_type=pytesseract.Output.DICT)
+   ```
+3. Run the text detection script:
 
    ```bash
    python src/main.py
    ```
 
-3. View the detected text in the terminal output.
+4. View the detected text in the terminal output.
 
 ## Notes
 
