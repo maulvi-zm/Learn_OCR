@@ -1,38 +1,45 @@
-
 ## Setup
 
 1. Create and activate the virtual environment:
 
-    ```bash
-    python -m venv venv          # Create a virtual environment
-    ```
+   ```bash
+   python -m venv venv          # Create a virtual environment
+   ```
 
-    On Windows:
+   On Windows:
 
-    ```bash
-    .\venv\Scripts\activate     # Activate the virtual environment
-    ```
+   ```bash
+   .\venv\Scripts\activate     # Activate the virtual environment
+   ```
 
-    On Unix or MacOS:
+   On Unix or MacOS:
 
-    ```bash
-    source venv/bin/activate    # Activate the virtual environment
-    ```
+   ```bash
+   source venv/bin/activate    # Activate the virtual environment
+   ```
 
 2. Install project dependencies:
 
-    ```bash
-    pip install -r requirements.txt
-    ```
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+   to use tesseract, you must download tesseract first
+
+   ```
+   Link: https://tesseract-ocr.github.io/tessdoc/Downloads.html
+
+   Instalation Path: C:\Users\USER\AppData\Local\Programs\Tesseract-OCR\tesseract.exe
+   ```
 
 ## Usage
 
 1. Place your images in the `images/` folder.
 2. Run the text detection script:
 
-    ```bash
-    python src/main.py
-    ```
+   ```bash
+   python src/main.py
+   ```
 
 3. View the detected text in the terminal output.
 
