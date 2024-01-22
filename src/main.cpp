@@ -1,57 +1,123 @@
-#include <iostream>
+/*
+ *      Author: alexanderb
+ */
+
+#include <stdio.h>
 #include <opencv2/opencv.hpp>
 
-void harrisCornerDetection(const cv::Mat& image, int windowSize, double k, double threshold) {
-    // Convert the image to grayscale
-    cv::Mat gray;
-    cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
+#include "harris.hpp"
 
-    // Compute image gradients using Sobel operators
-    cv::Mat Ix, Iy;
-    cv::Sobel(gray, Ix, CV_64F, 1, 0, 3);
-    cv::Sobel(gray, Iy, CV_64F, 0, 1, 3);
+using namespace cv;
+using namespace std;
 
-    // Compute products of gradients
-    cv::Mat Ixx = Ix.mul(Ix);
-    cv::Mat Iyy = Iy.mul(Iy);
-    cv::Mat Ixy = Ix.mul(Iy);
+//Harris algorithm parameters
+// Specifies the sensitivity factor of the Harris algorithm (0 < k < 0.25)
+float k = 0.25;
+// Size of the box filter that is applied to the integral images
+int boxFilterSize = 3;
+// dimension of the maxima suppression box around a maxima
+int maximaSuppressionDimension = 10;
 
-    // Apply Gaussian blur to the products of gradients
-    int kernelSize = 5;
-    cv::GaussianBlur(Ixx, Ixx, cv::Size(kernelSize, kernelSize), 0);
-    cv::GaussianBlur(Iyy, Iyy, cv::Size(kernelSize, kernelSize), 0);
-    cv::GaussianBlur(Ixy, Ixy, cv::Size(kernelSize, kernelSize), 0);
+//UI parameters
+// dimension of the objects showing a maxima in the image
+int markDimension = 5;
+// constant for the slider-value division
+float divisionConstant = 1000000;
 
-    // Calculate the Harris corner response
-    cv::Mat detM = Ixx.mul(Iyy) - Ixy.mul(Ixy);
-    cv::Mat traceM = Ixx + Iyy;
-    cv::Mat harrisResponse = detM - k * traceM.mul(traceM);
+//Global variables
+int slider_valueMaxsp = 10;
+int slider_valueMeanfilter = 2;
+int slider_valuePercentage = 1;
+float percentage;
+bool gauss = true;
+Mat m_img;
 
-    // Normalize the Harris response to a scale of 0 to 255
-    cv::normalize(harrisResponse, harrisResponse, 0, 255, cv::NORM_MINMAX, CV_64F);
+void doHarris() {
+    // compute harris
+    Harris harris(m_img, k, boxFilterSize, gauss);
 
-    // Apply threshold to detect corners
-    cv::Mat corners = cv::Mat::zeros(image.size(), CV_8UC1);
-    corners.setTo(255, harrisResponse > threshold * harrisResponse.max());
+    // get vector of points wanted
+    vector<pointData> resPts = harris.getMaximaPoints(percentage, boxFilterSize, maximaSuppressionDimension);
+    // cout << resPts.size() << " Points" << endl;
 
-    // Display the original and result images
-    cv::imshow("Original Image", image);
-    cv::imshow("Harris Corner Detection Result", corners);
-    cv::waitKey(0);
-    cv::destroyAllWindows();
+    Mat _img = Util::MarkInImage(m_img, resPts, markDimension);
+    imshow("HarrisCornerDetector", _img);
 }
 
-int main() {
-    // Load the image
-    cv::Mat originalImage = cv::imread("path_to_your_image.jpg");
+//-----------------------------------------------------------------------------------------------
+void CallbackTrackbarMaxsp(int value, void* userdata) {
+    maximaSuppressionDimension = slider_valueMaxsp;
+    cout << "maximaSuppressionDimension:" << maximaSuppressionDimension << endl;
 
-    if (originalImage.empty()) {
-        std::cerr << "Error: Could not read the image." << std::endl;
-        return -1;
+    doHarris();
+}
+
+//-----------------------------------------------------------------------------------------------
+void CallbackTrackbarMeanfilter(int value, void* userdata) {
+    boxFilterSize = slider_valueMeanfilter;
+
+    cout << "boxFilterSize:" << boxFilterSize << endl;
+
+    doHarris();
+}
+
+//-----------------------------------------------------------------------------------------------
+void CallbackTrackbarPercentage(int value, void* userdata) {
+    // calculate percentage of the points with top-harris response wished to display
+    percentage = slider_valuePercentage / (float) divisionConstant;
+
+    cout << "percentage:" << percentage << endl;
+
+    doHarris();
+}
+
+void CallBackFuncMouse(int event, int x, int y, int flags, void* userdata) {
+    if  ( event == EVENT_LBUTTONDOWN ) {
+        if(gauss) {
+            cout << "Changed to gaussian filter." << endl;
+            gauss = false;
+        } else {
+            cout << "Changed to mean filter." << endl;
+            gauss = true;
+        }
+
+        doHarris();
+    }
+}
+
+//-----------------------------------------------------------------------------------------------
+int main(int argc, char** argv) {
+    // read image from file + error handling
+    Mat img;
+
+    if (argc == 1) {
+        cout << "No image provided! Usage: ./Ex1 [path to image]" << endl << "Using default image: haus.jpg" << endl;
+
+        img = imread("haus.jpg");
+    } else {
+        img = imread(argv[1]);
     }
 
-    // Apply Harris Corner Detection
-    harrisCornerDetection(originalImage, 3, 0.04, 0.01);
+    // if(img.rows > 100 || img.cols > 100) {
+    //     int newrows = 600;
+    //     int newcols = img.cols * newrows / img.rows;
+
+    //     resize(img, img, Size(newcols, newrows), 0, 0, INTER_CUBIC);
+    // }
+    img.copyTo(m_img);
+
+    // create UI and show the image
+    namedWindow("HarrisCornerDetector", 1);
+
+    createTrackbar("maxima suppresison", "HarrisCornerDetector", &maximaSuppressionDimension, 14, CallbackTrackbarMeanfilter);
+    createTrackbar("size filter", "HarrisCornerDetector", &slider_valueMeanfilter, 20, CallbackTrackbarMeanfilter);
+    createTrackbar("number points", "HarrisCornerDetector", &slider_valuePercentage, 1000, CallbackTrackbarPercentage);
+    setMouseCallback("HarrisCornerDetector", CallBackFuncMouse);
+
+
+    imshow("HarrisCornerDetector", img);
+    waitKey(0);
 
     return 0;
+
 }
