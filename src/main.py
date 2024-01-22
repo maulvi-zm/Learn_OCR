@@ -2,7 +2,7 @@ from ultralytics import YOLO
 import cv2
 
 def textDetection(path):
-    model = YOLO("best.pt")
+    model = YOLO("best-4.pt")
     results = model.predict(path)
     result = results[0]
     output = []
