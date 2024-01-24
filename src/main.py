@@ -1,57 +1,42 @@
-import numpy as np
-import cv2 as cv
-filename = 'test/11.jpg'
-img = cv.imread(filename)
+import cv2
 
-def resize_img(width, img):
-    # Define the desired width or height
-    desired_width = width  # You can set your desired width
-    # Calculate the corresponding height to maintain the aspect ratio
-    aspect_ratio = img.shape[1] / img.shape[0]
-    desired_height = int(desired_width / aspect_ratio)
-    # Resize the image
-    return cv.resize(img, (desired_width, desired_height), interpolation=cv.INTER_LINEAR)
+import src
 
-new_img = resize_img(500, img)
 
-gray = cv.cvtColor(new_img,cv.COLOR_BGR2GRAY)
-gray = np.float32(gray)
-dst = cv.cornerHarris(gray,2,3,0.04)
+def process(im):
+    im = cv2.bitwise_not(im)
+    # cv2.imshow("afterbitwise",im)
+    # cv2.waitKey(0)
+    # edgesdef = src.detect_edges(im, blur_radius=7, thr1=0)
+    edges = src.detect_edges(im, blur_radius=7)
+    # cv2.imshow("edgesdef",edgesdef)
+    cv2.imshow("edges",edges)
 
-#result is dilated for marking the corners, not important
-dst = cv.dilate(dst,None)
+    lines_unique = src.detect_lines(edges)
+    # cv2.imshow("line",lines_unique)
+    print(lines_unique)
+    _intersections = src.find_intersections(lines_unique, im)
+    print(_intersections)
+    return src.find_quadrilaterals(_intersections)
 
-# Threshold for an optimal value, it may vary depending on the image.
-new_img[dst>0.01*dst.max()]=[0,0,255]
 
-# cara gambar garis
-# pts  = np.array([[20, 30], [70, 80], [50, 10]], dtype=np.int32)
-# new_img = cv.polylines(new_img, [pts] , isClosed=True, color=100, thickness=2)
-# print(dst1.max())
-# max =  699983,40.0
-# for i, row in enumerate(dst1):
-#     for j, value in enumerate(row):
-#         if (dst1[i][j] > 0.01*dst1.max()):
-#             dst1[i][j] = 1
-#         else:
-#             dst1[i][j] = 0
-# print(dst1[0])
+def draw(rects, im, debug=False):
+    if len(rects) == 0:
+        return im
+    if debug:
+        [draw_rect(im, rect, (0, 255, 0), 2) for rect in rects]
+    best = max(rects, key=_area)
+    if best:
+        draw_rect(im, best)
+    return im
 
-# dst = dst1.splitlines()
-# for i in dst1:
-#     print(i)
-#     print("\n")
-# print(len(dst1))
-# print(len(dst1[0]))
-# print(f"Jumlah: {n0+n1}")
-# print(f"n0 = {n0}")
-# print(f"n1 = {n1}")
 
-# print(dst)
-# print(new_img)
+def _area(rect): #luas terbesar
+    x, y = zip(*rect)
+    width = max(x) - min(x)
+    height = max(y) - min(y)
+    return width * height
 
-# print(new_img)
-cv.imshow('new_img',new_img)
 
-if cv.waitKey(0) & 0xff == 27:
-    cv.destroyAllWindows()
+def draw_rect(im, rect, col=(255, 0, 0), thickness=5):
+    [cv2.line(im, rect[i], rect[(i+1) % len(rect)], col, thickness=thickness) for i in range(len(rect))]
