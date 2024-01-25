@@ -166,12 +166,19 @@ def process(image):
     low = int(high / 2)
     canny = cv2.Canny(blur, low, high, 1)
 
+
     # # 4. Hough line detection
     lines = houghline(canny)
     points = points_inter(lines)
     best = find_best_quadrilateral(points)
+
     scan = correctPerspective(image, best)
 
     return scan
 
+image = cv2.imread("image/2.jpeg")
+scan = process(image)
+rotated = cv2.rotate(scan, cv2.ROTATE_90_CLOCKWISE)
+rotated = cv2.rotate(rotated, cv2.ROTATE_90_CLOCKWISE)
+cv2.imwrite("scan.jpg", rotated)
 
