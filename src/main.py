@@ -1,5 +1,33 @@
 import cv2
 import numpy as np
+import os
+
+# Resize image by width
+def resize_img_byW(width, img):
+    # Define the desired width or height
+    desired_width = width  # You can set your desired width
+    # Calculate the corresponding height to maintain the aspect ratio
+    aspect_ratio = img.shape[1] / img.shape[0] #lebar/tinggi
+    desired_height = int(desired_width / aspect_ratio)
+    # Resize the image
+    return cv2.resize(img, (desired_width, desired_height), interpolation=cv2.INTER_LINEAR)
+
+# Resize image by height
+def resize_img_byH(height, img):
+    # Define the desired height or height
+    desired_height = height  # You can set your desired height
+    # Calculate the corresponding height to maintain the aspect ratio
+    aspect_ratio = img.shape[1] / img.shape[0]
+    desired_width = int(aspect_ratio*desired_height)
+    # Resize the image
+    return cv2.resize(img, (desired_width, desired_height), interpolation=cv2.INTER_LINEAR)
+
+def resize(scale, img):
+    if(img.shape[0]>img.shape[1]):
+        img = resize_img_byH(scale, img)
+    else:
+        img = resize_img_byW(scale, img)
+    return img
 
 def drawline(lines, image):
     for line in lines:
@@ -131,7 +159,6 @@ def find_best_quadrilateral(points):
                     if area > best_area:
                         best_area = area
                         best_points = [p1, p2, p3, p4]
-                        print(i, j, k, l, "\n", np.asarray(best_points))
 
     return np.asarray(best_points)
 
@@ -163,12 +190,11 @@ def process(image):
     # # 3. Canny edge detection
     threshold, _ = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     high = threshold
-    low = int(high / 2)
+    low = int(high / 3)
     canny = cv2.Canny(blur, low, high, 1)
-
-
     # # 4. Hough line detection
     lines = houghline(canny)
+
     points = points_inter(lines)
     best = find_best_quadrilateral(points)
 
@@ -176,9 +202,19 @@ def process(image):
 
     return scan
 
-image = cv2.imread("image/2.jpeg")
-scan = process(image)
-rotated = cv2.rotate(scan, cv2.ROTATE_90_CLOCKWISE)
-rotated = cv2.rotate(rotated, cv2.ROTATE_90_CLOCKWISE)
-cv2.imwrite("scan.jpg", rotated)
+if __name__ == "__main__":
+    # read all the images in the folder
+    folder_path = "image"  # Replace with the actual folder path
+    image_files = os.listdir(folder_path)
+    os.makedirs("processed", exist_ok=True)
 
+    i = 1
+    for image_file in image_files:
+        image_path = os.path.join(folder_path, image_file)
+        image = cv2.imread(image_path)
+
+        # Process the image
+        processed_image = process(image)
+
+        # Save the processed image in /processed folder
+        cv2.imwrite(f"processed/{image_file}", processed_image)
