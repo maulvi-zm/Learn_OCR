@@ -1,6 +1,34 @@
 import cv2
 import numpy as np
 
+# Resize image by width
+def resize_img_byW(width, img):
+    # Define the desired width or height
+    desired_width = width  # You can set your desired width
+    # Calculate the corresponding height to maintain the aspect ratio
+    aspect_ratio = img.shape[1] / img.shape[0] #lebar/tinggi
+    desired_height = int(desired_width / aspect_ratio)
+    # Resize the image
+    return cv2.resize(img, (desired_width, desired_height), interpolation=cv2.INTER_LINEAR)
+
+# Resize image by height
+def resize_img_byH(height, img):
+    # Define the desired height or height
+    desired_height = height  # You can set your desired height
+    # Calculate the corresponding height to maintain the aspect ratio
+    aspect_ratio = img.shape[1] / img.shape[0]
+    desired_width = int(aspect_ratio*desired_height)
+    # Resize the image
+    return cv2.resize(img, (desired_width, desired_height), interpolation=cv2.INTER_LINEAR)
+
+def resize(scale, img):
+    if(img.shape[0]>img.shape[1]):
+        img = resize_img_byH(scale, img)
+    else:
+        img = resize_img_byW(scale, img)
+    return img
+
+
 def drawline(lines, image):
     for line in lines:
         rho, theta = line[0]
@@ -147,12 +175,15 @@ def correctPerspective(image, points):
     hB = np.sqrt((tr[0]-br[0])**2 + (tr[1]-br[1])**2 )
     maxH = max(int(hA), int(hB))
     ds= np.array([[0,0],[maxW-1, 0],[maxW-1, maxH-1],[0, maxH-1]], dtype="float32")
-    transformMatrix = cv2.getPerspectiveTransform(r,ds)
+    transformMatrix = cv2.getPerspectiveTransform(r,ds,)
     scan = cv2.warpPerspective(image, transformMatrix, (maxW, maxH))
 
     return scan
 
-def process(image):
+def process(raw_image):
+    # 0. resize
+    image = resize(800, raw_image)
+
     # 1. Convert to grayscale
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     kernel = np.ones((5,5),np.uint8)
@@ -160,24 +191,37 @@ def process(image):
     blur =cv2.GaussianBlur(dilation,(5,5),0)
     blur= cv2.erode(blur,kernel,iterations =5)
 
-    # # 3. Canny edge detection
+    # 3. Canny edge detection
     threshold, _ = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     high = threshold
     low = int(high / 2)
     canny = cv2.Canny(blur, low, high, 1)
+    cv2.imshow("canny", canny)
+    cv2.waitKey(0)
 
-
-    # # 4. Hough line detection
+    # 4. Hough line detection
     lines = houghline(canny)
     points = points_inter(lines)
+    img = drawline(lines,image)
+    cv2.imshow("line", img)
+    cv2.waitKey(0)
     best = find_best_quadrilateral(points)
+    
+    # Normalization to init scale
+    ratioH = raw_image.shape[0]/image.shape[0]
+    ratioW = raw_image.shape[1]/image.shape[1]
+    best[:, 0] *= ratioW
+    best[:, 1] *= ratioH
 
-    scan = correctPerspective(image, best)
-
+    # Perspective correction
+    scan = correctPerspective(raw_image, best)
+    
     return scan
 
-image = cv2.imread("assets/image/test5.jpg")
-scan = process(image)
-# rotated = cv2.rotate(scan, cv2.ROTATE_90_CLOCKWISE)
-# rotated = cv2.rotate(rotated, cv2.ROTATE_90_CLOCKWISE)
-cv2.imwrite("assets/correctionImage/1.jpg", scan)
+# image = cv2.imread("assets/image/test7.jpg")
+# scan = process(image)
+# cv2.imshow("scan",scan)
+# cv2.waitKey(0)
+# # rotated = cv2.rotate(scan, cv2.ROTATE_90_CLOCKWISE)
+# # rotated = cv2.rotate(rotated, cv2.ROTATE_90_CLOCKWISE)
+# cv2.imwrite("assets/correctionImage/4.jpg", scan)
