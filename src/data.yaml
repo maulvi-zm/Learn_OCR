@@ -1,5 +1,0 @@
-train: ../Text_detection_box-1/train/images
-val: ../Text_detection_box-1/valid/images
-
-nc: 1
-names: ['text']
