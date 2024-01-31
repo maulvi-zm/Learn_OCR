@@ -1,39 +1,40 @@
-from ultralytics import YOLO
 import cv2
+import numpy as np
+import pyzbar.pyzbar as pyzbar
 
-def textDetection(path):
-    model = YOLO("best.pt")
-    results = model.predict(path)
-    result = results[0]
-    output = []
-    for box in result.boxes:
-        x1, y1, x2, y2 = [
-          round(x) for x in box.xyxy[0].tolist()
-        ]
-        class_id = box.cls[0].item()
-        prob = round(box.conf[0].item(), 2)
-        output.append([
-          x1, y1, x2, y2, result.names[class_id], prob
-        ])
-    return output
+# Load imgae, grayscale, Gaussian blur, Otsu's threshold
+def getQR(filename):
+    image = cv2.imread(filename)
+    original = image.copy()
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    blur = cv2.GaussianBlur(gray, (9,9), 0)
+    thresh = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
 
-def drawBoundingBoxes(image_path, output):
-    # Load the image
-    image = cv2.imread(image_path)
+    # Morph close
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5,5))
+    close = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel, iterations=2)
 
-    # Draw bounding boxes on the image
-    for box in output:
-        x1, y1, x2, y2, label, prob = box
-        cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 2)
-        label_text = f"{label}: {prob}"
-        cv2.putText(image, label_text, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+    # Find contours and filter for QR code
+    cnts = cv2.findContours(close, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    cnts = cnts[0] if len(cnts) == 2 else cnts[1]
+    for c in cnts:
+        peri = cv2.arcLength(c, True)
+        approx = cv2.approxPolyDP(c, 0.04 * peri, True)
+        x,y,w,h = cv2.boundingRect(approx)
+        area = cv2.contourArea(c)
+        ar = w / float(h)
+        if len(approx) == 4 and area > 1000 and (ar > .85 and ar < 1.3):
+            cv2.rectangle(image, (x, y), (x + w, y + h), (36,255,12), 3)
+            ROI = original[y:y+h, x:x+w]
+            return ROI
+    return ValueError("No QR code found")
 
-    # Display the result
-    cv2.imshow("Detected Text", image)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+def detectQR(image):
+    # Decode QR code
+    qrDecoder = cv2.QRCodeDetector()
+    miror = cv2.flip(image, 1)
+    data, points, straight_qrcode = qrDecoder.detectAndDecode(miror)
 
-# Example usage:
-image_path = "images/4.jpg"
-output_from_detection = textDetection(image_path)
-drawBoundingBoxes(image_path, output_from_detection)
+    print("Decoded Data : {}".format(data))
+
+print(detectQR(getQR("2.jpg")))
