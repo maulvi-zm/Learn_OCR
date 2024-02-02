@@ -1,0 +1,11 @@
+nama 1
+no seri 2
+alamat 3
+question 4
+nidi 5
+tipe 6
+sertif 7
+no reg 8
+coordinate 9
+lhpp 0
+other 10
